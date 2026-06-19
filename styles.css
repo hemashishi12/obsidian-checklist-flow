@@ -1,0 +1,25 @@
+.checklist-flow-checkbox-drag-enabled .cm-line input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.checklist-flow-dragging .cm-line input[type="checkbox"] {
+  cursor: grabbing;
+}
+
+.checklist-flow-drop-indicator {
+  background: var(--interactive-accent);
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+  height: 2px;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+}
+
+.checklist-flow-dragging .cm-dropCursor {
+  display: none !important;
+}
