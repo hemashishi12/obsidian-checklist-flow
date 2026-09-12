@@ -1,6 +1,6 @@
 {
   "name": "obsidian-checklist-flow",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Move completed checklist items down and drag-reorder checklist items in Obsidian.",
   "author": "FlyingNeko",
   "license": "MIT",

@@ -65,6 +65,8 @@ npm run build
 
 The build writes `main.js`, `manifest.json`, and `styles.css` in the repository root. Copy those three files into an Obsidian plugin folder named `checklist-flow`, or install the plugin through your preferred Obsidian plugin development workflow.
 
+For a release, run the test, type-check, and production build commands, then publish the generated `main.js`, `manifest.json`, and `styles.css` as GitHub Release assets. The release tag must match the version in `manifest.json`; the current maintenance release is `0.1.1`.
+
 ## License
 
 MIT

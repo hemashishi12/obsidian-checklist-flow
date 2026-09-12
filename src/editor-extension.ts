@@ -409,22 +409,21 @@ function getTaskLineMetrics(view: EditorView, sourceLineIndex: number): TaskLine
 function positionDropIndicator(dragState: DragState, event: { clientY: number }) {
   const drop = getDropTarget(dragState.view, event, dragState.lineIndex);
   if (!drop) {
-    dragState.indicator.style.opacity = "0";
+    dragState.indicator.setCssProps({ opacity: "0" });
     return;
   }
 
-  dragState.indicator.style.left = `${drop.indicatorLeft}px`;
-  dragState.indicator.style.opacity = "1";
-  dragState.indicator.style.top = `${drop.indicatorTop}px`;
-  dragState.indicator.style.width = `${drop.indicatorWidth}px`;
+  dragState.indicator.setCssProps({
+    left: `${drop.indicatorLeft}px`,
+    opacity: "1",
+    top: `${drop.indicatorTop}px`,
+    width: `${drop.indicatorWidth}px`,
+  });
 }
 
 function createDropIndicator(view: EditorView): HTMLElement {
   view.scrollDOM.querySelectorAll(".checklist-flow-drop-indicator").forEach((indicator) => indicator.remove());
-  const indicator = document.createElement("div");
-  indicator.className = "checklist-flow-drop-indicator";
-  view.scrollDOM.appendChild(indicator);
-  return indicator;
+  return view.scrollDOM.createDiv({ cls: "checklist-flow-drop-indicator" });
 }
 
 function clearDragState(plugin: ChecklistFlowPlugin) {
