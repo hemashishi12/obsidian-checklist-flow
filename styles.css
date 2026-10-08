@@ -16,9 +16,19 @@
   background: transparent !important;
 }
 
-.checklist-flow-dragged-line {
-  background-color: color-mix(in srgb, var(--interactive-accent) 18%, transparent) !important;
+.checklist-flow-drag-highlight {
+  background: color-mix(in srgb, var(--interactive-accent) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--interactive-accent) 70%, transparent);
+  border-radius: 4px;
   box-shadow: inset 2px 0 0 var(--interactive-accent);
+  height: 24px;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 90;
 }
 
 .checklist-flow-drop-indicator {

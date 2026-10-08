@@ -16,10 +16,11 @@ const POINTER_DRAG_THRESHOLD = 6;
 const SUPPRESS_CLICK_MS = 250;
 
 interface DragState {
-  draggedLine: HTMLElement | null;
+  highlight: HTMLElement;
   indicator: HTMLElement;
   lineIndex: number;
   kind: DragKind;
+  removeHighlightScrollListener: () => void;
   view: EditorView;
 }
 
@@ -90,6 +91,8 @@ export function createChecklistFlowExtension(plugin: ChecklistFlowPlugin) {
 
           const checkbox = getTaskCheckbox(event.target);
           if (checkbox) {
+            event.preventDefault();
+            event.stopPropagation();
             const lineIndex = getTaskLineIndexFromElement(this.view, checkbox);
             if (lineIndex === null) {
               return;
@@ -112,6 +115,8 @@ export function createChecklistFlowExtension(plugin: ChecklistFlowPlugin) {
             return;
           }
 
+          event.preventDefault();
+          event.stopPropagation();
           this.clearPendingDrag();
           this.pendingDrag = createPendingDrag(plugin, this.view, numberLineIndex, "number", event, () =>
             this.clearPendingDrag(),
@@ -226,6 +231,7 @@ function createPendingDrag(
     moveEvent.preventDefault();
     moveEvent.stopPropagation();
     if (plugin.dragState) {
+      positionDragHighlight(plugin.dragState);
       positionDropIndicator(plugin.dragState, moveEvent);
     }
   };
@@ -239,6 +245,7 @@ function createPendingDrag(
       upEvent.preventDefault();
       upEvent.stopPropagation();
       performDrop(plugin, pending.view, upEvent);
+      clearPointerSelection(pending.view);
       if (pending.kind === "checkbox") {
         suppressNextCheckboxClick(plugin);
       } else {
@@ -253,6 +260,7 @@ function createPendingDrag(
       return;
     }
     clearDragState(plugin);
+    clearPointerSelection(pending.view);
     onDone();
   };
 
@@ -279,15 +287,24 @@ function startPointerDrag(plugin: ChecklistFlowPlugin, pending: PendingDrag) {
   clearDragState(plugin);
   pending.view.dom.classList.add("checklist-flow-dragging");
   resetSelectionToLine(pending.view, pending.lineIndex);
-  const draggedLine = getLineElement(pending.view, pending.lineIndex);
-  draggedLine?.classList.add("checklist-flow-dragged-line");
+  const highlight = createDragHighlight(pending.view);
+  const updateHighlight = () => {
+    if (plugin.dragState?.view === pending.view) {
+      positionDragHighlight(plugin.dragState);
+    }
+  };
+  pending.view.scrollDOM.addEventListener("scroll", updateHighlight);
   plugin.dragState = {
-    draggedLine,
+    highlight,
     indicator: createDropIndicator(pending.view),
     lineIndex: pending.lineIndex,
     kind: pending.kind,
+    removeHighlightScrollListener: () => pending.view.scrollDOM.removeEventListener("scroll", updateHighlight),
     view: pending.view,
   };
+  if (plugin.dragState) {
+    positionDragHighlight(plugin.dragState);
+  }
 }
 
 function performDrop(plugin: ChecklistFlowPlugin, view: EditorView, event: { clientY: number }) {
@@ -480,11 +497,44 @@ function createDropIndicator(view: EditorView): HTMLElement {
   return view.scrollDOM.createDiv({ cls: "checklist-flow-drop-indicator" });
 }
 
+function createDragHighlight(view: EditorView): HTMLElement {
+  view.scrollDOM.querySelectorAll(".checklist-flow-drag-highlight").forEach((highlight) => highlight.remove());
+  return view.scrollDOM.createDiv({ cls: "checklist-flow-drag-highlight" });
+}
+
+function positionDragHighlight(dragState: DragState) {
+  const lineElement = getLineElement(dragState.view, dragState.lineIndex);
+  const rect = lineElement?.getBoundingClientRect();
+  if (!rect) {
+    dragState.highlight.setCssProps({ opacity: "0" });
+    return;
+  }
+
+  const scrollRect = dragState.view.scrollDOM.getBoundingClientRect();
+  dragState.highlight.setCssProps({
+    height: `${rect.height}px`,
+    left: `${rect.left - scrollRect.left + dragState.view.scrollDOM.scrollLeft}px`,
+    opacity: "1",
+    top: `${rect.top - scrollRect.top + dragState.view.scrollDOM.scrollTop}px`,
+    width: `${rect.width}px`,
+  });
+}
+
 function clearDragState(plugin: ChecklistFlowPlugin) {
   plugin.dragState?.view.dom.classList.remove("checklist-flow-dragging");
-  plugin.dragState?.draggedLine?.classList.remove("checklist-flow-dragged-line");
+  plugin.dragState?.removeHighlightScrollListener();
+  plugin.dragState?.highlight.remove();
   plugin.dragState?.indicator.remove();
   plugin.dragState = null;
+}
+
+function clearPointerSelection(view: EditorView) {
+  const selection = view.state.selection.main;
+  view.dispatch({
+    scrollIntoView: false,
+    selection: { anchor: selection.head, head: selection.head },
+  });
+  view.dom.ownerDocument.getSelection()?.removeAllRanges();
 }
 
 function resetSelectionToLine(view: EditorView, lineIndex: number) {

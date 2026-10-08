@@ -10,8 +10,9 @@ import {
 } from "./settings";
 
 interface DragState {
-  draggedLine: HTMLElement | null;
+  highlight: HTMLElement;
   indicator: HTMLElement;
+  removeHighlightScrollListener: () => void;
   lineIndex: number;
   kind: "checkbox" | "number";
   view: EditorView;
