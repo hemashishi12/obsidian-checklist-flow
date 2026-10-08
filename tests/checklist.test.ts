@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   applyChecklistEdit,
   findTaskStartLineAtOrAbove,
+  findListStartLineAtOrAbove,
   getSiblingTaskLineIndexes,
+  getSiblingListLineIndexes,
   moveTaskBlock,
+  moveListBlock,
   sortChecklistEditAtLine,
   sortChecklistAtLine,
   taskStatusChanged,
@@ -107,5 +110,37 @@ describe("helpers", () => {
   it("returns same-level sibling task line indexes", () => {
     const input = "- [ ] a\n  - [ ] child\n- [ ] b\n\n- [ ] c\n";
     expect(getSiblingTaskLineIndexes(input, 0)).toEqual([0, 2]);
+  });
+});
+
+describe("ordinary list dragging", () => {
+  it("moves numbered items before a same-level target and renumbers them", () => {
+    const input = "5. a\n6. b\n7. c\n";
+    const result = moveListBlock(input, 2, 0, false, settings);
+    expect(result.text).toBe("5. c\n6. a\n7. b\n");
+  });
+
+  it("supports bullet items without changing their markers", () => {
+    const input = "- a\n- b\n- c\n";
+    const result = moveListBlock(input, 2, 0, false, settings);
+    expect(result.text).toBe("- c\n- a\n- b\n");
+  });
+
+  it("keeps child blocks attached to the dragged list item", () => {
+    const input = "1. a\n2. b\n   child\n3. c\n";
+    const result = moveListBlock(input, 1, 3, true, settings);
+    expect(result.text).toBe("1. a\n2. c\n3. b\n   child\n");
+  });
+
+  it("does not auto-sort an ordinary list after dragging", () => {
+    const input = "1. a\n2. b\n3. c\n";
+    const result = moveListBlock(input, 2, 0, false, settings);
+    expect(result.text).toBe("1. c\n2. a\n3. b\n");
+  });
+
+  it("finds list starts and sibling blocks", () => {
+    const input = "1. a\n   details\n2. b\n\n3. c\n";
+    expect(findListStartLineAtOrAbove(input, 1)).toBe(0);
+    expect(getSiblingListLineIndexes(input, 0)).toEqual([0, 2]);
   });
 });

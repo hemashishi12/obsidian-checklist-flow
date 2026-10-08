@@ -12,12 +12,14 @@ import {
 interface DragState {
   indicator: HTMLElement;
   lineIndex: number;
+  kind: "checkbox" | "number";
   view: EditorView;
 }
 
 export default class ChecklistFlowPlugin extends Plugin {
   dragState: DragState | null = null;
   suppressNextCheckboxClick = false;
+  suppressNextNumberClick = false;
   settings: ChecklistFlowSettings = DEFAULT_SETTINGS;
 
   async onload() {
@@ -53,12 +55,14 @@ export default class ChecklistFlowPlugin extends Plugin {
 
     this.addCommand({
       id: "toggle-drag-handles",
-      name: "Toggle checkbox drag reorder",
+      name: "Toggle checkbox and number drag reorder",
       callback: async () => {
         this.settings.enableDragHandles = !this.settings.enableDragHandles;
         await this.saveSettings();
         this.refreshEditors();
-        new Notice(`Checklist Flow: checkbox drag reorder ${this.settings.enableDragHandles ? "enabled" : "disabled"}.`);
+        new Notice(
+          `Checklist Flow: checkbox and number drag reorder ${this.settings.enableDragHandles ? "enabled" : "disabled"}.`,
+        );
       },
     });
   }
@@ -114,8 +118,8 @@ class ChecklistFlowSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Drag from checkbox")
-      .setDesc("Hold and drag a task checkbox to reorder same-level items in the current checklist.")
+      .setName("Drag from checkbox or number")
+      .setDesc("Hold a task checkbox or an ordinary ordered-list number, then drag to reorder same-level items.")
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.enableDragHandles).onChange(async (value) => {
           this.plugin.settings.enableDragHandles = value;

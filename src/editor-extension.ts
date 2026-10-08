@@ -1,8 +1,12 @@
 import { EditorView, type PluginValue, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import type ChecklistFlowPlugin from "./main";
 import {
+  findListStartLineAtOrAbove,
   findTaskStartLineAtOrAbove,
+  getOrderedListMarkerLength,
+  getSiblingListLineIndexes,
   getSiblingTaskLineIndexes,
+  moveListBlock,
   moveTaskBlock,
   sortChecklistEditAtLine,
   taskStatusChanged,
@@ -14,11 +18,15 @@ const SUPPRESS_CLICK_MS = 250;
 interface DragState {
   indicator: HTMLElement;
   lineIndex: number;
+  kind: DragKind;
   view: EditorView;
 }
 
-interface PendingCheckboxDrag {
+type DragKind = "checkbox" | "number";
+
+interface PendingDrag {
   lineIndex: number;
+  kind: DragKind;
   pointerId: number;
   removeListeners: () => void;
   startX: number;
@@ -30,7 +38,7 @@ export function createChecklistFlowExtension(plugin: ChecklistFlowPlugin) {
   const viewPlugin = ViewPlugin.fromClass(
     class ChecklistFlowViewPlugin implements PluginValue {
       private cleanup: Array<() => void> = [];
-      private pendingDrag: PendingCheckboxDrag | null = null;
+      private pendingDrag: PendingDrag | null = null;
       private sinkTimer: number | null = null;
 
       constructor(private readonly view: EditorView) {
@@ -59,6 +67,13 @@ export function createChecklistFlowExtension(plugin: ChecklistFlowPlugin) {
         const scroller = this.view.scrollDOM;
 
         const onClick = (event: MouseEvent) => {
+          if (plugin.suppressNextNumberClick) {
+            plugin.suppressNextNumberClick = false;
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+
           if (!plugin.suppressNextCheckboxClick || !getTaskCheckbox(event.target)) {
             return;
           }
@@ -73,22 +88,31 @@ export function createChecklistFlowExtension(plugin: ChecklistFlowPlugin) {
           }
 
           const checkbox = getTaskCheckbox(event.target);
-          if (!checkbox) {
+          if (checkbox) {
+            const lineIndex = getTaskLineIndexFromElement(this.view, checkbox);
+            if (lineIndex === null) {
+              return;
+            }
+
+            const taskLineIndex = findTaskStartLineAtOrAbove(this.view.state.doc.toString(), lineIndex);
+            if (taskLineIndex === null) {
+              return;
+            }
+
+            this.clearPendingDrag();
+            this.pendingDrag = createPendingDrag(plugin, this.view, taskLineIndex, "checkbox", event, () =>
+              this.clearPendingDrag(),
+            );
             return;
           }
 
-          const lineIndex = getTaskLineIndexFromElement(this.view, checkbox);
-          if (lineIndex === null) {
-            return;
-          }
-
-          const taskLineIndex = findTaskStartLineAtOrAbove(this.view.state.doc.toString(), lineIndex);
-          if (taskLineIndex === null) {
+          const numberLineIndex = getOrderedNumberLineIndexAtPoint(this.view, event);
+          if (numberLineIndex === null) {
             return;
           }
 
           this.clearPendingDrag();
-          this.pendingDrag = createPendingCheckboxDrag(plugin, this.view, taskLineIndex, event, () =>
+          this.pendingDrag = createPendingDrag(plugin, this.view, numberLineIndex, "number", event, () =>
             this.clearPendingDrag(),
           );
         };
@@ -164,16 +188,18 @@ export function createChecklistFlowExtension(plugin: ChecklistFlowPlugin) {
   return [viewPlugin];
 }
 
-function createPendingCheckboxDrag(
+function createPendingDrag(
   plugin: ChecklistFlowPlugin,
   view: EditorView,
   lineIndex: number,
+  kind: DragKind,
   event: PointerEvent,
   onDone: () => void,
-): PendingCheckboxDrag {
+): PendingDrag {
   const ownerWindow = view.dom.ownerDocument.defaultView ?? window;
-  const pending: PendingCheckboxDrag = {
+  const pending: PendingDrag = {
     lineIndex,
+    kind,
     pointerId: event.pointerId,
     removeListeners: () => undefined,
     startX: event.clientX,
@@ -192,6 +218,7 @@ function createPendingCheckboxDrag(
         return;
       }
       startPointerDrag(plugin, pending);
+      window.getSelection()?.removeAllRanges();
     }
 
     moveEvent.preventDefault();
@@ -210,7 +237,11 @@ function createPendingCheckboxDrag(
       upEvent.preventDefault();
       upEvent.stopPropagation();
       performDrop(plugin, pending.view, upEvent);
-      suppressNextCheckboxClick(plugin);
+      if (pending.kind === "checkbox") {
+        suppressNextCheckboxClick(plugin);
+      } else {
+        suppressNextNumberClick(plugin);
+      }
     }
     onDone();
   };
@@ -235,12 +266,13 @@ function createPendingCheckboxDrag(
   return pending;
 }
 
-function startPointerDrag(plugin: ChecklistFlowPlugin, pending: PendingCheckboxDrag) {
+function startPointerDrag(plugin: ChecklistFlowPlugin, pending: PendingDrag) {
   clearDragState(plugin);
   pending.view.dom.classList.add("checklist-flow-dragging");
   plugin.dragState = {
     indicator: createDropIndicator(pending.view),
     lineIndex: pending.lineIndex,
+    kind: pending.kind,
     view: pending.view,
   };
 }
@@ -259,16 +291,18 @@ function performDrop(plugin: ChecklistFlowPlugin, view: EditorView, event: { cli
   }
 
   const text = view.state.doc.toString();
-  const targetTaskLine = findTaskStartLineAtOrAbove(text, drop.lineIndex);
-  if (targetTaskLine === null) {
+  const findTargetLine = dragState.kind === "number" ? findListStartLineAtOrAbove : findTaskStartLineAtOrAbove;
+  const targetListLine = findTargetLine(text, drop.lineIndex);
+  if (targetListLine === null) {
     clearDragState(plugin);
     return;
   }
 
-  const result = moveTaskBlock(
+  const move = dragState.kind === "number" ? moveListBlock : moveTaskBlock;
+  const result = move(
     text,
     dragState.lineIndex,
-    targetTaskLine,
+    targetListLine,
     drop.placeAfterTarget,
     plugin.settings,
   );
@@ -283,6 +317,13 @@ function suppressNextCheckboxClick(plugin: ChecklistFlowPlugin) {
   plugin.suppressNextCheckboxClick = true;
   window.setTimeout(() => {
     plugin.suppressNextCheckboxClick = false;
+  }, SUPPRESS_CLICK_MS);
+}
+
+function suppressNextNumberClick(plugin: ChecklistFlowPlugin) {
+  plugin.suppressNextNumberClick = true;
+  window.setTimeout(() => {
+    plugin.suppressNextNumberClick = false;
   }, SUPPRESS_CLICK_MS);
 }
 
@@ -337,7 +378,7 @@ interface DropTarget {
   placeAfterTarget: boolean;
 }
 
-interface TaskLineMetric {
+interface ListItemLineMetric {
   bottom: number;
   left: number;
   lineIndex: number;
@@ -345,7 +386,7 @@ interface TaskLineMetric {
 }
 
 function getDropTarget(view: EditorView, event: { clientY: number }, sourceLineIndex: number): DropTarget | null {
-  const metrics = getTaskLineMetrics(view, sourceLineIndex);
+  const metrics = getListItemLineMetrics(view, sourceLineIndex);
   if (metrics.length === 0) {
     return null;
   }
@@ -379,9 +420,9 @@ function getDropTarget(view: EditorView, event: { clientY: number }, sourceLineI
   };
 }
 
-function getTaskLineMetrics(view: EditorView, sourceLineIndex: number): TaskLineMetric[] {
+function getListItemLineMetrics(view: EditorView, sourceLineIndex: number): ListItemLineMetric[] {
   const text = view.state.doc.toString();
-  const siblingLineIndexes = getSiblingTaskLineIndexes(text, sourceLineIndex);
+  const siblingLineIndexes = getSiblingListLineIndexes(text, sourceLineIndex);
   if (siblingLineIndexes.length === 0) {
     return [];
   }
@@ -459,4 +500,23 @@ function getTaskLineIndexFromElement(view: EditorView, element: HTMLElement): nu
     const position = view.posAtCoords({ x: rect.left + 1, y: rect.top + rect.height / 2 });
     return position === null ? null : view.state.doc.lineAt(position).number - 1;
   }
+}
+
+function getOrderedNumberLineIndexAtPoint(view: EditorView, event: PointerEvent): number | null {
+  if (!(event.target instanceof HTMLElement) || !event.target.closest(".cm-line")) {
+    return null;
+  }
+
+  const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
+  if (position === null) {
+    return null;
+  }
+
+  const line = view.state.doc.lineAt(position);
+  const markerLength = getOrderedListMarkerLength(line.text);
+  if (markerLength === null || position > line.from + markerLength) {
+    return null;
+  }
+
+  return line.number - 1;
 }

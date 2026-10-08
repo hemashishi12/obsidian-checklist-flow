@@ -5,6 +5,7 @@ Checklist Flow is an Obsidian plugin for making Markdown task lists feel closer 
 - Checked tasks automatically sink below unfinished sibling tasks.
 - Ordered task lists keep their starting number after automatic sinking or manual reordering.
 - Same-level task items can be reordered by holding and dragging the task checkbox.
+- Same-level ordinary numbered-list items can be reordered by holding and dragging the number.
 
 ## Usage
 
@@ -16,23 +17,31 @@ Install or enable the `Checklist Flow` plugin in Obsidian, then use normal Markd
 7. [x] Rest
 ```
 
+Ordinary numbered lists work the same way:
+
+```markdown
+1. First topic
+2. Second topic
+3. Third topic
+```
+
 When a task is checked, completed items move to the bottom of the same contiguous, same-level checklist. Child lines stay attached to their parent task.
 
-To reorder manually, hold the checkbox and drag. An insertion line shows where the task will be placed. A plain click on the checkbox still toggles the task as usual.
+To reorder manually, hold the checkbox (for a task) or the number (for an ordinary ordered list) and drag. An insertion line shows where the item will be placed. Hovering a number does not change its appearance or cursor. A plain click on the checkbox still toggles the task as usual.
 
 ## Settings
 
 Open `Settings > Community plugins > Checklist Flow`.
 
 - `Auto-sink completed tasks`: move completed tasks below unfinished siblings.
-- `Drag from checkbox`: hold and drag a task checkbox to reorder same-level items.
+- `Drag from checkbox or number`: hold and drag a task checkbox or an ordinary ordered-list number to reorder same-level items.
 - `Done status characters`: checkbox states treated as done. Default: `xX`.
 
 ## Scope
 
 The plugin intentionally keeps v1 narrow:
 
-- Works on regular Markdown task lines such as `- [ ]`, `- [x]`, `5. [ ]`, and `5. [x]`.
+- Works on regular Markdown task lines such as `- [ ]`, `- [x]`, `5. [ ]`, and `5. [x]`, plus ordinary lines such as `1. Topic`.
 - Reorders only within the same contiguous checklist and indentation level.
 - Keeps child task blocks and indented notes attached to their parent task.
 - Does not reorder Tasks query results, reading view output, tables, Kanban cards, callouts, or code blocks.

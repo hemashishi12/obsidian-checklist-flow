@@ -6,6 +6,10 @@
   cursor: grabbing;
 }
 
+.checklist-flow-dragging .cm-line {
+  user-select: none;
+}
+
 .checklist-flow-drop-indicator {
   background: var(--interactive-accent);
   border-radius: 999px;

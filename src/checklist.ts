@@ -22,29 +22,36 @@ interface NormalizedDocument {
   lines: string[];
 }
 
-interface TaskLine {
+interface ListItem {
   indent: number;
-  marker: string;
+  isTask: boolean;
   orderedDelimiter: "." | ")" | null;
   orderedNumber: number | null;
   prefix: string;
+  status: string | null;
+}
+
+type TaskLine = ListItem & {
   status: string;
-}
+};
 
-interface TaskBlock {
+interface ListItemBlock {
   start: number;
   end: number;
-  task: TaskLine;
+  item: ListItem;
 }
 
-interface SiblingGroup {
-  blocks: TaskBlock[];
+interface SiblingGroup<TBlock> {
+  blocks: TBlock[];
   end: number;
   start: number;
 }
 
-const TASK_LINE_RE = /^(\s*)(?:[-*+]|\d+[.)])\s+\[([^\]])\](?:\s|$)/;
+const LIST_LINE_RE = /^(\s*)(?:([-*+])|(\d+)([.)]))(?:[ \t]+(.*))?$/;
+const TASK_STATUS_TEXT_RE = /^\[([^\]])\](?:\s|$)/;
 const FENCE_RE = /^\s*(```|~~~)/;
+
+type ParseMode = "list" | "task";
 
 export function isTaskLine(line: string): boolean {
   return parseTaskLine(line) !== null;
@@ -68,7 +75,7 @@ export function sortChecklistEditAtLine(
   settings: Pick<ChecklistFlowSettings, "doneStatusChars">,
 ): ChecklistTextEdit {
   const document = splitDocument(text);
-  const group = findSiblingGroup(document.lines, lineIndex, computeFenceLines(document.lines));
+  const group = findSiblingGroup(document.lines, lineIndex, computeFenceLines(document.lines), "task");
   if (!group || group.blocks.length < 2) {
     return { changed: false };
   }
@@ -78,7 +85,7 @@ export function sortChecklistEditAtLine(
     return { changed: false };
   }
 
-  const replacement = renumberOrderedTaskBlocks(sorted, document.lines, group.blocks[0].task);
+  const replacement = renumberOrderedBlocks(sorted, document.lines, group.blocks[0].item);
   return {
     changed: true,
     from: lineStartOffset(document, group.start),
@@ -101,9 +108,22 @@ export function moveTaskBlock(
   placeAfterTarget: boolean,
   settings: Pick<ChecklistFlowSettings, "doneStatusChars">,
 ): ChecklistChange {
+  if (!parseTaskLine(splitDocument(text).lines[sourceLineIndex] ?? "")) {
+    return { changed: false, text };
+  }
+  return moveListBlock(text, sourceLineIndex, targetLineIndex, placeAfterTarget, settings);
+}
+
+export function moveListBlock(
+  text: string,
+  sourceLineIndex: number,
+  targetLineIndex: number,
+  placeAfterTarget: boolean,
+  settings: Pick<ChecklistFlowSettings, "doneStatusChars">,
+): ChecklistChange {
   const document = splitDocument(text);
   const fenceLines = computeFenceLines(document.lines);
-  const sourceGroup = findSiblingGroup(document.lines, sourceLineIndex, fenceLines);
+  const sourceGroup = findSiblingGroup(document.lines, sourceLineIndex, fenceLines, "list");
   if (!sourceGroup || sourceGroup.blocks.length < 2) {
     return { changed: false, text };
   }
@@ -127,16 +147,20 @@ export function moveTaskBlock(
   nextBlocks.splice(insertionIndex, 0, sourceBlock);
 
   const nextLines = document.lines.slice();
-  const replacement = renumberOrderedTaskBlocks(nextBlocks, document.lines, sourceGroup.blocks[0].task);
+  const replacement = renumberOrderedBlocks(nextBlocks, document.lines, sourceGroup.blocks[0].item);
   nextLines.splice(sourceGroup.start, sourceGroup.end - sourceGroup.start, ...replacement);
 
-  const sortedAfterDrag = sortChecklistAtLine(
-    joinDocument({ ...document, lines: nextLines }),
-    targetLineIndex,
-    settings,
-  );
-  if (sortedAfterDrag.changed) {
-    return { changed: true, text: sortedAfterDrag.text };
+  const sourceTask = parseTaskLine(document.lines[sourceLineIndex] ?? "");
+  const targetTask = parseTaskLine(document.lines[targetLineIndex] ?? "");
+  if (sourceTask && targetTask) {
+    const sortedAfterDrag = sortChecklistAtLine(
+      joinDocument({ ...document, lines: nextLines }),
+      targetLineIndex,
+      settings,
+    );
+    if (sortedAfterDrag.changed) {
+      return { changed: true, text: sortedAfterDrag.text };
+    }
   }
 
   return { changed: true, text: joinDocument({ ...document, lines: nextLines }) };
@@ -148,35 +172,31 @@ export function getTaskLineIndexAtTextPosition(text: string, position: number): 
 }
 
 export function findTaskStartLineAtOrAbove(text: string, lineIndex: number): number | null {
-  const document = splitDocument(text);
-  const fenceLines = computeFenceLines(document.lines);
-  const line = document.lines[lineIndex];
-  if (!line || fenceLines[lineIndex]) {
-    return null;
-  }
+  return findListItemStartAtOrAbove(text, lineIndex, "task");
+}
 
-  const task = parseTaskLine(line);
-  if (task) {
-    return lineIndex;
-  }
-
-  for (let index = lineIndex - 1; index >= 0; index -= 1) {
-    const candidate = document.lines[index];
-    if (!candidate || isBlank(candidate) || fenceLines[index]) {
-      return null;
-    }
-    const candidateTask = parseTaskLine(candidate);
-    if (candidateTask && lineIndex < findBlockEnd(document.lines, index, candidateTask.indent, fenceLines)) {
-      return index;
-    }
-  }
-  return null;
+export function findListStartLineAtOrAbove(text: string, lineIndex: number): number | null {
+  return findListItemStartAtOrAbove(text, lineIndex, "list");
 }
 
 export function getSiblingTaskLineIndexes(text: string, lineIndex: number): number[] {
   const document = splitDocument(text);
-  const group = findSiblingGroup(document.lines, lineIndex, computeFenceLines(document.lines));
+  const group = findSiblingGroup(document.lines, lineIndex, computeFenceLines(document.lines), "task");
   return group?.blocks.map((block) => block.start) ?? [];
+}
+
+export function getSiblingListLineIndexes(text: string, lineIndex: number): number[] {
+  const document = splitDocument(text);
+  const group = findSiblingGroup(document.lines, lineIndex, computeFenceLines(document.lines), "list");
+  return group?.blocks.map((block) => block.start) ?? [];
+}
+
+export function getOrderedListMarkerLength(line: string): number | null {
+  const item = parseListItem(line);
+  if (!item || item.orderedNumber === null || item.orderedDelimiter === null) {
+    return null;
+  }
+  return item.prefix.length + String(item.orderedNumber).length + 1;
 }
 
 export function taskStatusChanged(beforeLine: string, afterLine: string): boolean {
@@ -220,24 +240,31 @@ function lineStartOffset(document: NormalizedDocument, lineIndex: number): numbe
   return offset;
 }
 
-function parseTaskLine(line: string): TaskLine | null {
-  const match = line.match(TASK_LINE_RE);
+function parseListItem(line: string): ListItem | null {
+  const match = line.match(LIST_LINE_RE);
   if (!match) {
     return null;
   }
-  const orderedMarker = match[0].match(/^(\s*)(\d+)([.)])(\s+\[[^\]]\](?:\s|$))/);
+  const orderedMarker = match[3] !== undefined ? match[0].match(/^(\s*)(\d+)([.)])/) : null;
+  const statusMatch = (match[5] ?? "").match(TASK_STATUS_TEXT_RE);
+  const status = statusMatch?.[1] ?? null;
   return {
     indent: indentationWidth(match[1]),
-    marker: match[0],
     orderedDelimiter: orderedMarker ? (orderedMarker[3] as "." | ")") : null,
     orderedNumber: orderedMarker ? Number.parseInt(orderedMarker[2], 10) : null,
     prefix: match[1],
-    status: match[2],
+    isTask: status !== null,
+    status,
   };
 }
 
-function renumberOrderedTaskBlocks(blocks: TaskBlock[], lines: string[], numberingAnchor: TaskLine): string[] {
-  if (!usesOrderedTaskMarkers(blocks, numberingAnchor)) {
+function parseTaskLine(line: string): TaskLine | null {
+  const item = parseListItem(line);
+  return item?.isTask && item.status !== null ? item as TaskLine : null;
+}
+
+function renumberOrderedBlocks(blocks: ListItemBlock[], lines: string[], numberingAnchor: ListItem): string[] {
+  if (!usesOrderedMarkers(blocks, numberingAnchor)) {
     return blocks.flatMap((block) => lines.slice(block.start, block.end));
   }
 
@@ -248,59 +275,66 @@ function renumberOrderedTaskBlocks(blocks: TaskBlock[], lines: string[], numberi
     const taskLine = blockLines[0];
     const nextNumber = firstNumber + index;
     return [
-      taskLine.replace(/^(\s*)\d+([.)])(\s+\[[^\]]\](?:\s|$))/, `$1${nextNumber}${delimiter}$3`),
+      taskLine.replace(/^(\s*)\d+([.)])/, (_marker, prefix: string, markerDelimiter: string) => {
+        return `${prefix}${nextNumber}${markerDelimiter}`;
+      }),
       ...blockLines.slice(1),
     ];
   });
 }
 
-function usesOrderedTaskMarkers(blocks: TaskBlock[], numberingAnchor: TaskLine): boolean {
+function usesOrderedMarkers(blocks: ListItemBlock[], numberingAnchor: ListItem): boolean {
   return (
     blocks.length > 0 &&
     numberingAnchor.orderedNumber !== null &&
     numberingAnchor.orderedDelimiter !== null &&
     blocks.every(
       (block) =>
-        block.task.orderedNumber !== null &&
-        block.task.orderedDelimiter !== null &&
-        block.task.orderedDelimiter === numberingAnchor.orderedDelimiter,
+        block.item.orderedNumber !== null &&
+        block.item.orderedDelimiter !== null &&
+        block.item.orderedDelimiter === numberingAnchor.orderedDelimiter,
     )
   );
 }
 
-function stablePartitionBlocks(blocks: TaskBlock[], doneStatusChars: string[]): TaskBlock[] {
+function stablePartitionBlocks(blocks: ListItemBlock[], doneStatusChars: string[]): ListItemBlock[] {
   const doneChars = new Set(doneStatusChars);
   return [
-    ...blocks.filter((block) => !doneChars.has(block.task.status)),
-    ...blocks.filter((block) => doneChars.has(block.task.status)),
+    ...blocks.filter((block) => !doneChars.has(block.item.status ?? "")),
+    ...blocks.filter((block) => doneChars.has(block.item.status ?? "")),
   ];
 }
 
-function sameBlockOrder(a: TaskBlock[], b: TaskBlock[]): boolean {
+function sameBlockOrder(a: ListItemBlock[], b: ListItemBlock[]): boolean {
   return a.length === b.length && a.every((block, index) => block.start === b[index]?.start);
 }
 
-function findSiblingGroup(lines: string[], taskLineIndex: number, fenceLines: boolean[]): SiblingGroup | null {
-  const task = parseTaskLine(lines[taskLineIndex] ?? "");
-  if (!task || fenceLines[taskLineIndex]) {
+function findSiblingGroup(
+  lines: string[],
+  itemLineIndex: number,
+  fenceLines: boolean[],
+  mode: ParseMode,
+): SiblingGroup<ListItemBlock> | null {
+  const item = mode === "task" ? parseTaskLine(lines[itemLineIndex] ?? "") : parseListItem(lines[itemLineIndex] ?? "");
+  if (!item || fenceLines[itemLineIndex]) {
     return null;
   }
 
-  const regionStart = findRegionStart(lines, taskLineIndex, task.indent, fenceLines);
-  const regionEnd = findRegionEnd(lines, taskLineIndex, task.indent, fenceLines);
+  const regionStart = findRegionStart(lines, itemLineIndex, item.indent, fenceLines);
+  const regionEnd = findRegionEnd(lines, itemLineIndex, item.indent, fenceLines);
   let index = regionStart;
-  let currentBlocks: TaskBlock[] = [];
+  let currentBlocks: ListItemBlock[] = [];
 
   while (index < regionEnd) {
-    const candidate = parseTaskLine(lines[index]);
-    if (!fenceLines[index] && candidate && candidate.indent === task.indent) {
+    const candidate = mode === "task" ? parseTaskLine(lines[index] ?? "") : parseListItem(lines[index] ?? "");
+    if (!fenceLines[index] && candidate && candidate.indent === item.indent) {
       const end = findBlockEnd(lines, index, candidate.indent, fenceLines);
-      currentBlocks.push({ start: index, end, task: candidate });
+      currentBlocks.push({ start: index, end, item: candidate });
       index = end;
       continue;
     }
 
-    if (currentBlocks.some((block) => block.start === taskLineIndex)) {
+    if (currentBlocks.some((block) => block.start === itemLineIndex)) {
       return {
         blocks: currentBlocks,
         end: currentBlocks[currentBlocks.length - 1].end,
@@ -312,7 +346,7 @@ function findSiblingGroup(lines: string[], taskLineIndex: number, fenceLines: bo
     index += 1;
   }
 
-  if (!currentBlocks.some((block) => block.start === taskLineIndex)) {
+  if (!currentBlocks.some((block) => block.start === itemLineIndex)) {
     return null;
   }
   return {
@@ -320,6 +354,32 @@ function findSiblingGroup(lines: string[], taskLineIndex: number, fenceLines: bo
     end: currentBlocks[currentBlocks.length - 1].end,
     start: currentBlocks[0].start,
   };
+}
+
+function findListItemStartAtOrAbove(text: string, lineIndex: number, mode: ParseMode): number | null {
+  const document = splitDocument(text);
+  const fenceLines = computeFenceLines(document.lines);
+  const line = document.lines[lineIndex];
+  if (!line || fenceLines[lineIndex]) {
+    return null;
+  }
+
+  const item = mode === "task" ? parseTaskLine(line) : parseListItem(line);
+  if (item) {
+    return lineIndex;
+  }
+
+  for (let index = lineIndex - 1; index >= 0; index -= 1) {
+    const candidateLine = document.lines[index];
+    if (!candidateLine || isBlank(candidateLine) || fenceLines[index]) {
+      return null;
+    }
+    const candidate = mode === "task" ? parseTaskLine(candidateLine) : parseListItem(candidateLine);
+    if (candidate && lineIndex < findBlockEnd(document.lines, index, candidate.indent, fenceLines)) {
+      return index;
+    }
+  }
+  return null;
 }
 
 function findRegionStart(lines: string[], taskLineIndex: number, indent: number, fenceLines: boolean[]): number {
