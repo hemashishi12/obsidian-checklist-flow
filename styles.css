@@ -2,12 +2,23 @@
   cursor: pointer;
 }
 
-.checklist-flow-dragging .cm-line input[type="checkbox"] {
-  cursor: grabbing;
+.checklist-flow-dragging,
+.checklist-flow-dragging * {
+  cursor: grabbing !important;
 }
 
 .checklist-flow-dragging .cm-line {
-  user-select: none;
+  user-select: none !important;
+}
+
+.checklist-flow-dragging ::selection,
+.checklist-flow-dragging .cm-selectionBackground {
+  background: transparent !important;
+}
+
+.checklist-flow-dragged-line {
+  background-color: color-mix(in srgb, var(--interactive-accent) 18%, transparent) !important;
+  box-shadow: inset 2px 0 0 var(--interactive-accent);
 }
 
 .checklist-flow-drop-indicator {

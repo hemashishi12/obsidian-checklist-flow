@@ -100,7 +100,7 @@ For an ordinary ordered list, press and hold the item number, then drag:
 3. Third
 ```
 
-An insertion line shows the drop position. After a drop, ordered markers are normalized while preserving the list’s original starting number.
+An insertion line shows the drop position, the dragged line stays highlighted, and the cursor becomes a closed hand while dragging. After a drop, ordered markers are normalized while preserving the list’s original starting number.
 
 A quick click on a checkbox still toggles the task. List numbers do not gain a hover cursor or visual effect; they remain visually unchanged until a press-and-drag gesture starts.
 

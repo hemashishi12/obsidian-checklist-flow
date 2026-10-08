@@ -10,6 +10,7 @@ import {
 } from "./settings";
 
 interface DragState {
+  draggedLine: HTMLElement | null;
   indicator: HTMLElement;
   lineIndex: number;
   kind: "checkbox" | "number";

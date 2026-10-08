@@ -16,6 +16,7 @@ const POINTER_DRAG_THRESHOLD = 6;
 const SUPPRESS_CLICK_MS = 250;
 
 interface DragState {
+  draggedLine: HTMLElement | null;
   indicator: HTMLElement;
   lineIndex: number;
   kind: DragKind;
@@ -214,11 +215,12 @@ function createPendingDrag(
 
     const distance = Math.hypot(moveEvent.clientX - pending.startX, moveEvent.clientY - pending.startY);
     if (!plugin.dragState) {
+      moveEvent.preventDefault();
+      moveEvent.stopPropagation();
       if (distance < POINTER_DRAG_THRESHOLD) {
         return;
       }
       startPointerDrag(plugin, pending);
-      window.getSelection()?.removeAllRanges();
     }
 
     moveEvent.preventDefault();
@@ -254,11 +256,18 @@ function createPendingDrag(
     onDone();
   };
 
+  const onSelectStart = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   ownerWindow.addEventListener("pointermove", onPointerMove, true);
+  ownerWindow.addEventListener("selectstart", onSelectStart, true);
   ownerWindow.addEventListener("pointerup", onPointerUp, true);
   ownerWindow.addEventListener("pointercancel", onPointerCancel, true);
   pending.removeListeners = () => {
     ownerWindow.removeEventListener("pointermove", onPointerMove, true);
+    ownerWindow.removeEventListener("selectstart", onSelectStart, true);
     ownerWindow.removeEventListener("pointerup", onPointerUp, true);
     ownerWindow.removeEventListener("pointercancel", onPointerCancel, true);
   };
@@ -269,7 +278,11 @@ function createPendingDrag(
 function startPointerDrag(plugin: ChecklistFlowPlugin, pending: PendingDrag) {
   clearDragState(plugin);
   pending.view.dom.classList.add("checklist-flow-dragging");
+  resetSelectionToLine(pending.view, pending.lineIndex);
+  const draggedLine = getLineElement(pending.view, pending.lineIndex);
+  draggedLine?.classList.add("checklist-flow-dragged-line");
   plugin.dragState = {
+    draggedLine,
     indicator: createDropIndicator(pending.view),
     lineIndex: pending.lineIndex,
     kind: pending.kind,
@@ -469,8 +482,24 @@ function createDropIndicator(view: EditorView): HTMLElement {
 
 function clearDragState(plugin: ChecklistFlowPlugin) {
   plugin.dragState?.view.dom.classList.remove("checklist-flow-dragging");
+  plugin.dragState?.draggedLine?.classList.remove("checklist-flow-dragged-line");
   plugin.dragState?.indicator.remove();
   plugin.dragState = null;
+}
+
+function resetSelectionToLine(view: EditorView, lineIndex: number) {
+  const line = view.state.doc.line(lineIndex + 1);
+  view.dispatch({
+    scrollIntoView: false,
+    selection: { anchor: line.from, head: line.from },
+  });
+}
+
+function getLineElement(view: EditorView, lineIndex: number): HTMLElement | null {
+  const line = view.state.doc.line(lineIndex + 1);
+  const at = view.domAtPos(line.from);
+  const node = at.node instanceof Element ? at.node : at.node.parentElement;
+  return node?.closest(".cm-line") ?? null;
 }
 
 function getTaskCheckbox(target: EventTarget | null): HTMLElement | null {
