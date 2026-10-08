@@ -1,81 +1,189 @@
 # Checklist Flow
 
-Checklist Flow is an Obsidian plugin for making Markdown task lists feel closer to Apple Notes:
+<div align="center">
 
-- Checked tasks automatically sink below unfinished sibling tasks.
-- Ordered task lists keep their starting number after automatic sinking or manual reordering.
-- Same-level task items can be reordered by holding and dragging the task checkbox.
-- Same-level ordinary numbered-list items can be reordered by holding and dragging the number.
+**A calmer way to organize tasks and ordered lists in Obsidian.**
+
+[![Release](https://img.shields.io/github/v/release/hemashishi12/obsidian-checklist-flow?color=7C3AED&label=release&logo=github)](https://github.com/hemashishi12/obsidian-checklist-flow/releases)
+[![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md)
+[![License](https://img.shields.io/badge/license-MIT-22C55E)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-Vitest-729F1D?logo=vitest&logoColor=white)](#development)
+
+Completed tasks move out of the way. Numbered lists stay numbered.
+
+</div>
+
+---
+
+## Why Checklist Flow?
+
+Obsidian task lists are great for writing, but long lists can become noisy as items are completed. Checklist Flow keeps the editor simple: finish a task and it sinks below unfinished work; hold a checkbox or a list number to rearrange the list directly.
+
+The plugin works on plain Markdown. There is no special syntax, no database to maintain, and no metadata added to your notes.
+
+## Highlights
+
+| | Feature | What it does |
+| --- | --- | --- |
+| ✅ | **Auto-sink completed tasks** | Completed tasks move below unfinished siblings in the same checklist. |
+| 🖐️ | **Drag task checkboxes** | Reorder same-level task items while keeping nested content attached. |
+| 🔢 | **Drag ordinary list numbers** | Reorder numbered lists by pressing and dragging the number. |
+| 🔢 | **Stable numbering** | A list starting at `5.` remains anchored to `5.` after sorting or dragging. |
+| 🧱 | **Markdown-native** | Uses regular `- [ ]`, `- [x]`, `1.`, and nested Markdown blocks. |
+| 🔒 | **Local and private** | No account, telemetry, network request, or note-content collection. |
+
+## Quick start
+
+### Requirements
+
+- Obsidian `1.5.0` or later
+- A desktop or mobile Obsidian vault
+
+### Install from a release
+
+1. Open the [latest release](https://github.com/hemashishi12/obsidian-checklist-flow/releases/latest).
+2. Download `main.js`, `manifest.json`, and `styles.css`.
+3. In your vault, create the folder:
+
+   ```text
+   <vault>/.obsidian/plugins/checklist-flow/
+   ```
+
+4. Copy the three downloaded files into that folder.
+5. In Obsidian, go to **Settings → Community plugins**, refresh the list, and enable **Checklist Flow**.
+
+### Install with BRAT
+
+If you already use [BRAT](https://github.com/TfTHacker/obsidian42-brat), add this repository:
+
+```text
+hemashishi12/obsidian-checklist-flow
+```
 
 ## Usage
 
-Install or enable the `Checklist Flow` plugin in Obsidian, then use normal Markdown task lists:
+### Complete and auto-sink tasks
+
+Use ordinary Markdown tasks:
 
 ```markdown
-5. [ ] Listen to a course
-6. [ ] Review wrong questions
-7. [x] Rest
+- [ ] Read the paper
+- [x] Send the reply
+- [ ] Write the summary
 ```
 
-Ordinary numbered lists work the same way:
+When **auto-sink** is enabled, checking *Send the reply* becomes:
 
 ```markdown
-1. First topic
-2. Second topic
-3. Third topic
+- [ ] Read the paper
+- [ ] Write the summary
+- [x] Send the reply
 ```
 
-When a task is checked, completed items move to the bottom of the same contiguous, same-level checklist. Child lines stay attached to their parent task.
+Only sibling items in the same contiguous list are reordered. Nested notes and child lists remain attached to their parent.
 
-To reorder manually, hold the checkbox (for a task) or the number (for an ordinary ordered list) and drag. An insertion line shows where the item will be placed. Hovering a number does not change its appearance or cursor. A plain click on the checkbox still toggles the task as usual.
+### Drag to reorder
+
+For a task list, press and hold the checkbox, then drag:
+
+```markdown
+- [ ] First
+- [ ] Second
+- [ ] Third
+```
+
+For an ordinary ordered list, press and hold the item number, then drag:
+
+```markdown
+1. First
+2. Second
+3. Third
+```
+
+An insertion line shows the drop position. After a drop, ordered markers are normalized while preserving the list’s original starting number.
+
+A quick click on a checkbox still toggles the task. List numbers do not gain a hover cursor or visual effect; they remain visually unchanged until a press-and-drag gesture starts.
+
+## Supported scope
+
+| Works | Does not work |
+| --- | --- |
+| Regular Markdown task lines | Reading-view rendered checklists |
+| Ordinary numbered-list lines | Tasks plugin query results |
+| Same-level sibling items | Kanban cards, tables, and canvas cards |
+| Nested task/list blocks attached to a parent | Content inside fenced code blocks |
+
+Checklist Flow deliberately edits only the affected contiguous list block. This keeps predictable behavior in notes that mix outlines, quotes, code, and task lists.
 
 ## Settings
 
-Open `Settings > Community plugins > Checklist Flow`.
+Open **Settings → Community plugins → Checklist Flow**.
 
-- `Auto-sink completed tasks`: move completed tasks below unfinished siblings.
-- `Drag from checkbox or number`: hold and drag a task checkbox or an ordinary ordered-list number to reorder same-level items.
-- `Done status characters`: checkbox states treated as done. Default: `xX`.
+| Setting | Default | Description |
+| --- | --- | --- |
+| **Auto-sink completed tasks** | On | Move completed tasks below unfinished siblings. |
+| **Drag from checkbox or number** | On | Enable press-and-drag reordering. |
+| **Done status characters** | `xX` | Checkbox values treated as completed. |
 
-## Scope
+## Privacy
 
-The plugin intentionally keeps v1 narrow:
+Checklist Flow runs locally inside Obsidian. It does **not**:
 
-- Works on regular Markdown task lines such as `- [ ]`, `- [x]`, `5. [ ]`, and `5. [x]`, plus ordinary lines such as `1. Topic`.
-- Reorders only within the same contiguous checklist and indentation level.
-- Keeps child task blocks and indented notes attached to their parent task.
-- Does not reorder Tasks query results, reading view output, tables, Kanban cards, callouts, or code blocks.
+- collect note contents or usage analytics;
+- make network requests;
+- require an account or external service;
+- add telemetry, tracking identifiers, or metadata to notes.
 
 ## Development
 
-Install dependencies:
+### Setup
 
-```powershell
+```bash
 npm install --no-audit --no-fund
 ```
 
-Run tests:
+### Common commands
 
-```powershell
+```bash
 npm test
-```
-
-Type-check:
-
-```powershell
 npx tsc --noEmit
-```
-
-Build for Obsidian:
-
-```powershell
 npm run build
+npm run dev
 ```
 
-The build writes `main.js`, `manifest.json`, and `styles.css` in the repository root. Copy those three files into an Obsidian plugin folder named `checklist-flow`, or install the plugin through your preferred Obsidian plugin development workflow.
+`npm run build` generates three files in the repository root:
 
-For a release, run the test, type-check, and production build commands, then publish the generated `main.js`, `manifest.json`, and `styles.css` as GitHub Release assets. The release tag must match the version in `manifest.json`; the current maintenance release is `0.1.1`.
+```text
+main.js
+manifest.json
+styles.css
+```
+
+Copy those files into a folder named `checklist-flow` inside your vault’s `.obsidian/plugins/` directory to test a local build.
+
+### Project layout
+
+```text
+src/
+├── checklist.ts          # Pure Markdown list parsing, sorting, and reordering
+├── editor-extension.ts   # CodeMirror drag and auto-sink integration
+├── main.ts               # Plugin lifecycle, commands, and settings
+└── settings.ts           # Shared settings types and defaults
+tests/
+└── checklist.test.ts     # Behavior tests for Markdown transformations
+```
+
+## Releasing
+
+1. Update `version` in `manifest.json`, `package.json`, and `package-lock.json`.
+2. Run tests, type checking, and a production build.
+3. Publish `main.js`, `manifest.json`, and `styles.css` as GitHub Release assets.
+4. Ensure the release tag matches the version in `manifest.json` (for example, `v0.2.0`).
+
+## Contributing
+
+Issues and pull requests are welcome. For behavioral changes, please include tests covering Markdown edge cases such as indentation, nested blocks, blank-line boundaries, and CRLF line endings.
 
 ## License
 
-MIT
+[MIT](LICENSE)
