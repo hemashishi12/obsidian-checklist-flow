@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 660" role="img" aria-labelledby="checklist-flow-title checklist-flow-description" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif">
+  <title id="checklist-flow-title">Checklist Flow interaction overview</title>
+  <desc id="checklist-flow-description">A completed task sinks below unfinished tasks, and an ordered list item can be dragged while keeping stable numbering.</desc>
+
+  <style>
+    .canvas { fill: #f6f7fb; }
+    .panel { fill: #ffffff; stroke: #dce1ec; stroke-width: 2; }
+    .title { fill: #101828; font-size: 34px; font-weight: 700; }
+    .heading { fill: #344054; font-size: 20px; font-weight: 650; }
+    .body { fill: #667085; font-size: 16px; }
+    .mono { fill: #475467; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 19px; }
+    .accent { fill: #7c5cff; }
+    .soft-accent { fill: #f0ecff; }
+    .done { fill: #98a2b3; }
+    .check { fill: #12805c; }
+    .check-bg { fill: #dff5ec; }
+    .line { stroke: #eaecf0; stroke-width: 2; }
+    .drop { stroke: #7c5cff; stroke-width: 4; stroke-linecap: round; }
+    .highlight { fill: rgba(124, 92, 255, 0.14); stroke: rgba(124, 92, 255, 0.55); }
+    .drag-handle { fill: #7c5cff; }
+
+    @media (prefers-color-scheme: dark) {
+      .canvas { fill: #050810; }
+      .panel { fill: #0d1424; stroke: #243047; }
+      .title { fill: #f8fafc; }
+      .heading { fill: #d0d9e6; }
+      .body { fill: #8a97ab; }
+      .mono { fill: #b8c4d5; }
+      .soft-accent { fill: rgba(124, 92, 255, 0.16); }
+      .done { fill: #748093; }
+      .check { fill: #54d09c; }
+      .check-bg { fill: rgba(18, 128, 92, 0.18); }
+      .line { stroke: #212d43; }
+    }
+  </style>
+
+  <rect class="canvas" width="1200" height="660" rx="0"/>
+
+  <text class="title" x="80" y="100">Keep lists flowing</text>
+  <text class="body" x="80" y="138">Plain Markdown in. No special syntax. No note metadata.</text>
+
+  <g transform="translate(80 190)">
+    <rect class="panel" width="500" height="380" rx="24"/>
+    <text class="heading" x="34" y="52">Completed tasks sink</text>
+    <text class="body" x="34" y="82">Unchecked work stays at the top</text>
+
+    <g transform="translate(34 118)">
+      <rect class="line" width="432" height="1"/>
+      <circle cx="16" cy="44" r="13" fill="none" stroke="#98a2b3" stroke-width="2.5"/>
+      <text class="mono" x="48" y="50">Read the paper</text>
+
+      <circle cx="16" cy="106" r="13" fill="none" stroke="#98a2b3" stroke-width="2.5"/>
+      <text class="mono" x="48" y="112">Write the summary</text>
+
+      <rect class="check-bg" x="-10" y="154" width="452" height="58" rx="14"/>
+      <rect class="check" x="6" y="170" width="20" height="20" rx="6"/>
+      <path d="M11 180l4 4 7-8" fill="none" stroke="#f8fafc" stroke-width="2.5" stroke-linecap="round"/>
+      <text class="mono done" x="48" y="190">Send the reply</text>
+      <text class="body" x="300" y="190">done ↓</text>
+    </g>
+  </g>
+
+  <g transform="translate(620 190)">
+    <rect class="panel" width="500" height="380" rx="24"/>
+    <text class="heading" x="34" y="52">Drag numbered items</text>
+    <text class="body" x="34" y="82">Same-level items keep their order</text>
+
+    <g transform="translate(34 122)">
+      <rect class="soft-accent" x="-10" y="4" width="452" height="58" rx="14"/>
+      <rect class="highlight" x="-10" y="75" width="452" height="58" rx="14"/>
+      <line class="drop" x1="0" x2="432" y1="147" y2="147"/>
+
+      <text class="mono" x="14" y="40">1. Plan the week</text>
+
+      <rect class="drag-handle" x="0" y="93" width="22" height="22" rx="7"/>
+      <text class="mono" x="40" y="111" style="fill: #7c5cff; font-weight: 700;">2. Review the draft</text>
+      <text class="body" x="304" y="111">dragging ⇅</text>
+
+      <text class="mono" x="14" y="180">3. Prepare examples</text>
+      <text class="body" x="0" y="238">Numbers stay stable — no manual renumbering.</text>
+    </g>
+  </g>
+
+  <g transform="translate(80 610)">
+    <text class="body">Local-first · Works in the editor · Preserves nested content · No telemetry</text>
+  </g>
+</svg>
