@@ -3,8 +3,7 @@
   "name": "Checklist Flow",
   "version": "0.2.0",
   "minAppVersion": "1.5.0",
-  "description": "Move completed checklist items down and drag-reorder checklist items inside the editor.",
+  "description": "Sink completed checklist tasks and drag-reorder task or numbered list items.",
   "author": "FlyingNeko",
-  "authorUrl": "",
   "isDesktopOnly": false
 }

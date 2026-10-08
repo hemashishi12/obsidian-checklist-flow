@@ -191,8 +191,9 @@ docs/
 
 1. Update `version` in `manifest.json`, `package.json`, and `package-lock.json`.
 2. Run tests, type checking, and a production build.
-3. Publish `main.js`, `manifest.json`, and `styles.css` as GitHub Release assets.
-4. Match the release tag to the version in `manifest.json` (for example, `v0.2.0`).
+3. Push a tag whose name exactly matches the manifest version (for example, `0.2.0`, without a `v` prefix).
+4. GitHub Actions builds and creates a draft release with `main.js`, `manifest.json`, and `styles.css`.
+5. Review the draft, add release notes, and publish it. The workflow also creates build provenance attestations.
 
 ## Contributing
 
