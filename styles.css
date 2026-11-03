@@ -1,3 +1,10 @@
+.cm-editor.checklist-flow-margin-hover,
+.cm-editor.checklist-flow-margin-selecting,
+.cm-editor.checklist-flow-margin-selecting * {
+  /* Preserve Margin Paragraph Select's calibrated 16px mirrored arrow. */
+  cursor: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='16'%20height='16'%3E%3Cpath%20d='M15.2%200.8%20L15.2%2013%20L11.8%2010.3%20L9.5%2014.9%20L7.2%2013.7%20L9.5%209.5%20L5.3%209.5%20Z'%20fill='white'%20stroke='black'%20stroke-width='1'/%3E%3C/svg%3E") 15 1, default;
+}
+
 .checklist-flow-checkbox-drag-enabled .cm-line input[type="checkbox"] {
   cursor: pointer;
 }

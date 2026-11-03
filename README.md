@@ -35,6 +35,7 @@ Everything stays in ordinary Markdown. There is no special syntax, no database, 
 | 🖐️ | **Drag task checkboxes** | Reorder same-level tasks while child notes and sublists stay attached. |
 | 🔢 | **Drag ordinary list numbers** | Reorder numbered lists by pressing the number, not just checkboxes. |
 | 🔢 | **Stable numbering** | A list starting at `5.` remains anchored to `5.` after sorting or dragging. |
+| ↗️ | **Select from the left margin** | Click to select a list item or paragraph; hold and drag to select more. |
 | 🧱 | **Markdown-native** | Works with regular `- [ ]`, `- [x]`, `1.`, and nested Markdown blocks. |
 | 🔒 | **Local and private** | No account, telemetry, network request, or note-content collection. |
 
@@ -115,6 +116,16 @@ While dragging:
 
 A quick click still toggles a checkbox. List numbers have no hover effect and remain visually unchanged until a press-and-drag gesture starts.
 
+### Select from the left margin
+
+Move the mouse into the blank area to the left of a line. The cursor becomes a right-pointing arrow. Click to select a whole list item or heading, or a whole ordinary paragraph. List items include their Markdown markers; nested items remain separate lines. Blank lines, quotes, table rows and headings stop paragraph expansion.
+
+Keep the left mouse button pressed and drag up or down to extend the selection across additional items/paragraphs. Moving back shrinks the selection; crossing the starting item reverses its direction. The selection includes all text between its endpoints. Dragging near the editor's top or bottom scrolls automatically. Release to keep the selected text, ready to copy or edit. Escape, window blur or pointer cancellation ends the gesture.
+
+This mouse feature works in Live Preview and Source Mode, including popout editor windows, independently of the drag-reorder setting. Checkbox and number dragging still reorder items; start in the blank left margin to select instead.
+
+This integrates **Margin Paragraph Select**. Disable that standalone plugin when using Checklist Flow to avoid duplicate input handlers.
+
 ## Supported scope
 
 | Works | Not covered |
@@ -179,13 +190,22 @@ src/
 ├── checklist.ts          # Pure Markdown parsing, sorting, and reordering
 ├── editor-extension.ts   # CodeMirror drag and auto-sink integration
 ├── main.ts               # Plugin lifecycle, commands, and settings
+├── margin-selection.ts   # Left-margin click/drag selection and auto-scroll
 └── settings.ts           # Shared setting types and defaults
 tests/
-└── checklist.test.ts     # Markdown transformation behavior tests
+├── checklist.test.ts     # Markdown transformation behavior tests
+└── margin-selection.test.ts # Paragraph boundaries and directional selection
 docs/
 └── assets/
     └── hero.svg          # Generic documentation illustration
 ```
+
+### Local integration notes
+
+- Margin selection attaches DOM listeners to each editor's `ownerDocument`, including popouts. In this vault, CodeMirror DOM event extensions from a different module instance previously failed silently; direct DOM listeners and `editor.cm.dispatch({ selection: { anchor, head } })` work reliably.
+- The mirrored cursor is calibrated to 16px with hotspot `15 1`; larger sizes looked oversized in Chromium.
+- The local CLI is `C:\Tools\Obsidian\Obsidian.com`. After copying a build into the vault, run `plugin:reload id=checklist-flow` and `dev:errors`. CLI evaluation runs in the main document: use the editor's own document/window when testing pointer events.
+- Bring Obsidian to the foreground before testing edge auto-scroll (`dev:cdp method=Page.bringToFront`): hidden windows pause animation frames and can produce a false failure. Local checks cover native mouse selection, checkbox clicks, number reordering, Source Mode and a separate popout document.
 
 ## Releasing
 

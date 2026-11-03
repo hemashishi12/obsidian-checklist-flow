@@ -1,6 +1,7 @@
 import { App, MarkdownView, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 import type { EditorView } from "@codemirror/view";
 import { createChecklistFlowExtension } from "./editor-extension";
+import { registerMarginSelection } from "./margin-selection";
 import { sortChecklistAtLine } from "./checklist";
 import {
   DEFAULT_SETTINGS,
@@ -27,6 +28,7 @@ export default class ChecklistFlowPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
     this.registerEditorExtension(createChecklistFlowExtension(this));
+    registerMarginSelection(this);
     this.addSettingTab(new ChecklistFlowSettingTab(this.app, this));
 
     this.addCommand({
